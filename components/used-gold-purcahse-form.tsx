@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
   Form,
@@ -16,6 +16,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ScanText } from "lucide-react";
+import { ScanOverlay } from "@/components/scan-overlay";
 
 
 type FormValues = {
@@ -39,21 +40,32 @@ export default function DocumentForm() {
     },
   });
 
+  const [showScan, setShowScan] = useState(false);
+
+  const handleScanClick = () => setShowScan(true);
+  const handleCloseScan = () => setShowScan(false);
+  const handleCapture = () => {
+    console.log("Photo captured!");
+    setShowScan(false);
+  };
+
   const onSubmit = (data: FormValues) => {
     console.log(data);
   };
 
   return (
     <Form {...form}>
-      <div className="max-w-lg mx-auto p-8 border rounded-md shadow-md m-8 ">
+      <div className="max-w-lg mx-auto p-8 border rounded-md shadow-md">
         <div className="mb-6 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Document Form</h1>
-          <button
-            type="button"
-            className="w-12 h-12 rounded-full border border-black flex items-center justify-center hover:bg-black hover:text-white transition"
+          <Button
+            variant="outline"  // keeps the border style like your previous button
+            size="icon"         // makes it square and fits the icon
+            onClick={handleScanClick}
           >
-            <ScanText size={24} />
-          </button>
+            <ScanText className="w-6 h-6" /> {/* adjust size if needed */}
+          </Button>
+
         </div>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -182,6 +194,7 @@ export default function DocumentForm() {
           <Button type="submit">Submit</Button>
         </form>
       </div>
+      {showScan && <ScanOverlay onClose={handleCloseScan} onCapture={handleCapture} />}
     </Form>
 
   );

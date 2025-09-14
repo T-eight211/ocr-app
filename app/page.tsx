@@ -5,9 +5,9 @@ import DocumentForm from "@/components/used-gold-purcahse-form";
 
 export default function Page() {
   return (
-  
+    <main className="p-8 ">
 
       <DocumentForm />
-
+    </main>
   );
 }
