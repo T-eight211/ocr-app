@@ -2,14 +2,34 @@
 import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { performOCR } from "@/utils/ocr";
 
 interface ScanOverlayProps {
   onClose: () => void;
-  onCapture: () => void;
+  onCapture: (text: string) => void;
 }
 
 export const ScanOverlay: React.FC<ScanOverlayProps> = ({ onClose, onCapture }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleCapture = async () => {
+    if (!videoRef.current) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+    // Call OCR
+    const text = await performOCR(canvas);
+
+    onCapture(text); // ✅ pass text to parent
+  };
+
+
 
   // Helper to stop the camera
   const stopCamera = () => {
@@ -86,7 +106,7 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({ onClose, onCapture }) 
         {/* Bottom section: Capture Button */}
         <div className="flex items-start justify-center">
           <button
-            onClick={onCapture}
+            onClick={handleCapture}
             className="w-12 h-12 rounded-full bg-black flex items-center justify-center hover:bg-gray-300 transition"
           >
             ●

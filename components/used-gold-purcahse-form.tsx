@@ -41,11 +41,12 @@ export default function DocumentForm() {
   });
 
   const [showScan, setShowScan] = useState(false);
+  const [ocrResult, setOcrResult] = useState<string>(""); // ✅ new state
 
   const handleScanClick = () => setShowScan(true);
   const handleCloseScan = () => setShowScan(false);
-  const handleCapture = () => {
-    console.log("Photo captured!");
+  const handleCapture = (text?: string) => {
+    if (text) setOcrResult(text); // store result
     setShowScan(false);
   };
 
@@ -195,6 +196,12 @@ export default function DocumentForm() {
         </form>
       </div>
       {showScan && <ScanOverlay onClose={handleCloseScan} onCapture={handleCapture} />}
+      {ocrResult && (
+        <div className="max-w-lg mx-auto p-4 mt-4 border rounded-md shadow-md bg-gray-50">
+          <h3 className="font-semibold mb-2">OCR Result:</h3>
+          <p className="whitespace-pre-wrap">{ocrResult}</p>
+        </div>
+      )}
     </Form>
 
   );
