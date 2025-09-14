@@ -63,7 +63,7 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({ onClose, onCapture }) 
 
         {/* Middle section: Video / Passport Frame */}
        <div className="flex items-center justify-center relative">
-        <div className="relative w-full aspect-[88/125] border-2 border-dashed rounded-md border-black overflow-hidden">
+        <div className="relative w-full aspect-[125/88] border-2 border-dashed rounded-md border-black overflow-hidden">
           {/* Video fills the whole outer box */}
           <video
             ref={videoRef}
