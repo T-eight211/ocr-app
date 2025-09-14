@@ -53,7 +53,7 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({ onClose, onCapture }) 
         </Button>
       </div>
 
-      <div className="grid grid-rows-[20%_60%_20%] flex-1 max-w-lg mx-auto gap-2 p-8">
+      <div className="grid grid-rows-[10%_80%_10%] flex-1 max-w-lg mx-auto gap-2">
         {/* Top section: Instructions */}
         <div className="flex items-end justify-center">
           <h2 className="text-l md:text-xl text-center">
