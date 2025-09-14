@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -11,19 +11,23 @@ interface ScanOverlayProps {
 export const ScanOverlay: React.FC<ScanOverlayProps> = ({ onClose, onCapture }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Helper to stop the camera
+  const stopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+      tracks.forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
+    }
+  };
+
   // Start camera when component mounts
   useEffect(() => {
     const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "environment", // use "user" for selfie mode
-          },
+          video: { facingMode: "environment" },
         });
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (err) {
         console.error("Error accessing camera:", err);
       }
@@ -31,14 +35,14 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({ onClose, onCapture }) 
 
     startCamera();
 
-    return () => {
-      // Stop camera when overlay closes
-      if (videoRef.current?.srcObject) {
-        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-        tracks.forEach((track) => track.stop());
-      }
-    };
+    return () => stopCamera(); // stop when unmount
   }, []);
+
+  // Handle close button
+  const handleClose = () => {
+    stopCamera(); // stop the camera immediately
+    onClose();    // trigger overlay close
+  };
 
   return (
     <div className="fixed inset-0 backdrop-blur p-8 flex flex-col">
@@ -47,7 +51,8 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({ onClose, onCapture }) 
         <Button
           variant="destructive"
           size="icon"
-          onClick={onClose}
+          onClick={handleClose}
+          
         >
           <X className="w-6 h-6" />
         </Button>
@@ -74,7 +79,7 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({ onClose, onCapture }) 
           />
 
           {/* Inner guideline overlay */}
-          <div className="absolute inset-0 m-8 border-2 border-black rounded-md pointer-events-none"></div>
+          <div className="absolute inset-0 m-4 border-2 border-black rounded-md pointer-events-none"></div>
         </div>
       </div>
 
