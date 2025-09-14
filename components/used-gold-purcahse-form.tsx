@@ -17,6 +17,21 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { format } from "date-fns";
 import { ScanText } from "lucide-react";
 import { ScanOverlay } from "@/components/scan-overlay";
+import { parseMRZ } from "@/utils/mrzParser";
+
+// Example MRZ date parser: "860615" -> 1986-06-15
+function parseMRZDate(mrzDate: string): Date {
+  // MRZ format: YYMMDD
+  const year = parseInt(mrzDate.slice(0, 2), 10);
+  const month = parseInt(mrzDate.slice(2, 4), 10) - 1; // JS months 0-11
+  const day = parseInt(mrzDate.slice(4, 6), 10);
+
+  // Simple logic: if year > currentYear % 100, it's 1900s; else 2000s
+  const currentYear = new Date().getFullYear() % 100;
+  const fullYear = year > currentYear ? 1900 + year : 2000 + year;
+
+  return new Date(fullYear, month, day);
+}
 
 
 type FormValues = {
@@ -45,10 +60,32 @@ export default function DocumentForm() {
 
   const handleScanClick = () => setShowScan(true);
   const handleCloseScan = () => setShowScan(false);
+  
+
+
   const handleCapture = (text?: string) => {
-    if (text) setOcrResult(text); // store result
+    if (text) {
+      setOcrResult(text); // still store raw OCR for display
+
+      try {
+        const parsed = parseMRZ(text);
+
+        // Pre-fill form
+        form.setValue("name", parsed.givenNames);
+        form.setValue("surname", parsed.surname);
+        // form.setValue("dob", parseMRZDate(parsed.dateOfBirth));
+        form.setValue("documentType", parsed.documentType === "P" ? "passport" : "id_card"); // simple mapping
+        form.setValue("documentNumber", parsed.documentNumber);
+      
+        // form.setValue("expiryDate", parseMRZDate(parsed.dateOfExpiry));
+      } catch (err) {
+        console.error("MRZ parsing failed:", err);
+      }
+    }
+
     setShowScan(false);
   };
+
 
   const onSubmit = (data: FormValues) => {
     console.log(data);
