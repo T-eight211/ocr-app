@@ -47,9 +47,6 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({ onClose, onCapture }) 
     onCapture(text);
   };
 
-
-
-
   // Helper to stop the camera
   const stopCamera = () => {
     if (videoRef.current?.srcObject) {
