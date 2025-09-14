@@ -15,19 +15,38 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({ onClose, onCapture }) 
   const handleCapture = async () => {
     if (!videoRef.current) return;
 
+    const video = videoRef.current;
     const canvas = document.createElement("canvas");
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+
+    // Inner box cropping
+    const margin = 4; // matches your Tailwind m-4
+    const innerWidth = video.videoWidth - margin * 2;
+    const innerHeight = video.videoHeight - margin * 2;
+
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    // Crop to inner box
+    ctx.drawImage(
+      video,
+      margin, // source x
+      margin, // source y
+      innerWidth, // source width
+      innerHeight, // source height
+      0,
+      0,
+      innerWidth,
+      innerHeight
+    );
 
     // Call OCR
     const text = await performOCR(canvas);
-
-    onCapture(text); // ✅ pass text to parent
+    onCapture(text);
   };
+
 
 
 
