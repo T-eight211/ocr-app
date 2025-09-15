@@ -70,9 +70,9 @@ export default function DocumentForm() {
         form.setValue("name", parsed.givenNames);
         form.setValue("surname", parsed.surname);
         if (parsed.dateOfBirth) {
-          const dob = new Date(parsed.dateOfBirth)
-          if (!isNaN(dob.getTime())) {
-            form.setValue("dob", dob)
+          const dob = parse(parsed.dateOfBirth, "dd/MM/yyyy", new Date());
+          if (isValid(dob)) {
+            form.setValue("dob", dob);
           }
         }
         form.setValue("documentType", parsed.documentType === "P" ? "passport" : "id_card"); // simple mapping
@@ -249,8 +249,22 @@ export default function DocumentForm() {
               </FormItem>
             )}
           />
-
-          <Button type="submit">Submit</Button>
+          <div className="flex gap-4">
+            <Button type="submit" className="flex-1">
+              Submit
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                form.reset(); // 🔑 This clears all fields back to defaultValues
+                setOcrResult(""); // also clear OCR result box
+              }}
+            >
+              Clear
+            </Button>
+          </div>
         </form>
       </div>
       {showScan && <ScanOverlay onClose={handleCloseScan} onCapture={handleCapture} />}

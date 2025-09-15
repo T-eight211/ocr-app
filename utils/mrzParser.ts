@@ -19,10 +19,15 @@ export function parseMRZ(ocrText: string): MRZData {
   // Split lines and filter out empty lines
   const lines = ocrText.split("\n").map(l => l.trim()).filter(Boolean);
   if (lines.length < 2) throw new Error("Invalid MRZ: less than 2 lines detected");
+  // Find the index of the first line that looks like MRZ (contains <<< or <<)
+  const mrzIndex = lines.findIndex(l => l.includes("<<<") || l.includes("<<"));
+  if (mrzIndex === -1 || mrzIndex + 1 >= lines.length) {
+    throw new Error("Invalid MRZ: could not find two consecutive MRZ lines");
+  }
 
-  // Take last two lines
-  const line1 = lines[lines.length - 2];
-  const line2 = lines[lines.length - 1];
+  // Take that line as line1 and the very next line as line2
+  const line1 = lines[mrzIndex];
+  const line2 = lines[mrzIndex + 1];
 
   // Line 1
   const documentType = line1.substring(0, 1);
