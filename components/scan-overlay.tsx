@@ -11,6 +11,8 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { performOCR } from "@/utils/ocr";
+import NextImage from "next/image";
+
 
 interface ScanOverlayProps {
   onClose: () => void;
@@ -137,14 +139,19 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
                   className="w-full h-full object-cover rounded-md"
                 />
               ) : (
-                <img
-                  src={capturedImage}
-                  alt="Captured"
-                  className="w-full h-full object-cover rounded-md"
-                />
+                <div className="relative w-full h-full">
+                  <NextImage
+                    src={capturedImage}
+                    alt="Captured"
+                    fill
+                    className="object-cover rounded-md"
+                    priority
+                  />
+                </div>
               )}
               <div className="absolute inset-0 m-4 border-2 border-black rounded-md pointer-events-none"></div>
             </div>
+
           </div>
 
           {/* Bottom buttons */}
