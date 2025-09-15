@@ -75,7 +75,9 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
     const canvas = document.createElement("canvas");
     const img = new Image();
     img.src = capturedImage;
-    await new Promise((res) => (img.onload = res));
+    await new Promise<void>((resolve) => {
+      img.onload = () => resolve();
+    });
 
     canvas.width = img.width;
     canvas.height = img.height;
@@ -87,9 +89,11 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
     try {
       const text = await performOCR(canvas);
       onCapture(text);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("OCR failed:", err);
-      setOcrError(err.message || "OCR failed. Please try again.");
+      const message =
+        err instanceof Error ? err.message : "OCR failed. Please try again.";
+      setOcrError(message);
       setShowAlert(true);
     }
   };
