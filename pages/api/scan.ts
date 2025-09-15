@@ -27,8 +27,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!result.document?.text) return res.status(500).json({ error: "No text extracted" });
 
     return res.status(200).json({ text: result.document.text });
-  } catch (err: any) {
+  } catch (err: Error | unknown) {
     console.error("Document AI error:", err);
-    return res.status(500).json({ error: "Document AI processing failed", details: err.message });
+
+    return res.status(500).json({
+      error: "Document AI processing failed",
+      details: err instanceof Error ? err.message : String(err),
+    });
   }
 }

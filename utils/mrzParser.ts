@@ -7,9 +7,9 @@ export interface MRZData {
   givenNames: string;
   documentNumber: string;
   nationality: string;
-  dateOfBirth: string; // YYYY-MM-DD
+  dateOfBirth: string; // DD/MM/YYYY
   sex: string;
-  dateOfExpiry: string; // YYYY-MM-DD
+  dateOfExpiry: string; // DD/MM/YYYY
 }
 
 /**
@@ -38,14 +38,23 @@ export function parseMRZ(ocrText: string): MRZData {
   const sex = line2.substring(20, 21);
   const dateOfExpiryRaw = line2.substring(21, 27);
 
-  // Convert dates to YYYY-MM-DD (handles 1900/2000 logic if needed)
+  // Convert dates to DD/MM/YYYY (handles 1900/2000 logic if needed)
   const convertMRZDate = (mrzDate: string): string => {
+    if (!/^\d{6}$/.test(mrzDate)) return "";
+
     const yy = parseInt(mrzDate.slice(0, 2), 10);
-    const mm = mrzDate.slice(2, 4);
-    const dd = mrzDate.slice(4, 6);
-    const currentYear = new Date().getFullYear() % 100;
-    const fullYear = yy > currentYear ? 1900 + yy : 2000 + yy;
-    return `${fullYear}-${mm}-${dd}`;
+    const mm = parseInt(mrzDate.slice(2, 4), 10);
+    const dd = parseInt(mrzDate.slice(4, 6), 10);
+
+    if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return "";
+
+    let fullYear = 2000 + yy;
+    // if (fullYear > new Date().getFullYear()) fullYear -= 100; // shift to 1900s if needed
+
+    const date = new Date(fullYear, mm - 1, dd);
+    if (isNaN(date.getTime())) return "";
+
+    return `${String(dd).padStart(2, "0")}/${String(mm).padStart(2, "0")}/${fullYear}`;
   };
 
   const dateOfBirth = convertMRZDate(dateOfBirthRaw);

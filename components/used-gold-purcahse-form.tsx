@@ -14,24 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, addDays, isValid, parse } from "date-fns";
 import { ScanText } from "lucide-react";
 import { ScanOverlay } from "@/components/scan-overlay";
 import { parseMRZ } from "@/utils/mrzParser";
 
-// Example MRZ date parser: "860615" -> 1986-06-15
-function parseMRZDate(mrzDate: string): Date {
-  // MRZ format: YYMMDD
-  const year = parseInt(mrzDate.slice(0, 2), 10);
-  const month = parseInt(mrzDate.slice(2, 4), 10) - 1; // JS months 0-11
-  const day = parseInt(mrzDate.slice(4, 6), 10);
-
-  // Simple logic: if year > currentYear % 100, it's 1900s; else 2000s
-  const currentYear = new Date().getFullYear() % 100;
-  const fullYear = year > currentYear ? 1900 + year : 2000 + year;
-
-  return new Date(fullYear, month, day);
-}
 
 
 type FormValues = {
@@ -44,14 +31,17 @@ type FormValues = {
 };
 
 export default function DocumentForm() {
+
+  const eighteenYearsAgo = new Date(new Date().setFullYear(new Date().getFullYear() - 18));
+
   const form = useForm<FormValues>({
     defaultValues: {
       name: "",
       surname: "",
-      dob: new Date(),
+      // dob: new Date(),
       documentType: "",
       documentNumber: "",
-      expiryDate: new Date(),
+      // expiryDate: new Date(),
     },
   });
 
@@ -60,8 +50,12 @@ export default function DocumentForm() {
 
   const handleScanClick = () => setShowScan(true);
   const handleCloseScan = () => setShowScan(false);
-  
 
+  // setopen for calender
+  const [open, setOpen] = useState(false);
+  const [openExpiry, setOpenExpiry] = useState(false);
+
+  
 
   const handleCapture = (text?: string) => {
     if (text) {
@@ -69,15 +63,26 @@ export default function DocumentForm() {
 
       try {
         const parsed = parseMRZ(text);
+        console.log("Parsed MRZ data:", parsed);
+        
 
         // Pre-fill form
         form.setValue("name", parsed.givenNames);
         form.setValue("surname", parsed.surname);
-        // form.setValue("dob", parseMRZDate(parsed.dateOfBirth));
+        if (parsed.dateOfBirth) {
+          const dob = new Date(parsed.dateOfBirth)
+          if (!isNaN(dob.getTime())) {
+            form.setValue("dob", dob)
+          }
+        }
         form.setValue("documentType", parsed.documentType === "P" ? "passport" : "id_card"); // simple mapping
         form.setValue("documentNumber", parsed.documentNumber);
-      
-        // form.setValue("expiryDate", parseMRZDate(parsed.dateOfExpiry));
+        if (parsed.dateOfExpiry) {
+          const expiry = parse(parsed.dateOfExpiry, "dd/MM/yyyy", new Date());
+          if (isValid(expiry)) {
+            form.setValue("expiryDate", expiry);
+          }
+        }
       } catch (err) {
         console.error("MRZ parsing failed:", err);
       }
@@ -140,12 +145,12 @@ export default function DocumentForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Date of Birth</FormLabel>
-                <Popover>
+                <Popover open={open} onOpenChange={setOpen}>
                   <PopoverTrigger>
                     <FormControl>
                       <Input
                         readOnly
-                        value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
+                        value={field.value ? format(field.value, "dd/MM/yyyy") : ""}
                         placeholder="Select date of birth"
                       />
                     </FormControl>
@@ -153,8 +158,15 @@ export default function DocumentForm() {
                   <PopoverContent>
                     <Calendar
                       mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
+                      defaultMonth={field.value || eighteenYearsAgo}                
+                      selected={field.value || eighteenYearsAgo}
+                      captionLayout="dropdown"
+                      disabled={(currentDate) => currentDate > eighteenYearsAgo}
+                      toYear={eighteenYearsAgo.getFullYear()} // latest year allowed
+                      onSelect={(date) => {
+                        field.onChange(date);
+                        setOpen(false); // close popover on date select
+                      }}
                     />
                   </PopoverContent>
                 </Popover>
@@ -206,12 +218,12 @@ export default function DocumentForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Expiry Date</FormLabel>
-                <Popover>
+                <Popover open={openExpiry} onOpenChange={setOpenExpiry}>
                   <PopoverTrigger>
                     <FormControl>
                       <Input
                         readOnly
-                        value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
+                        value={field.value ? format(field.value, "dd/MM/yyyy") : ""}
                         placeholder="Select expiry date"
                       />
                     </FormControl>
@@ -219,8 +231,17 @@ export default function DocumentForm() {
                   <PopoverContent>
                     <Calendar
                       mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
+                      selected={field.value || new Date()}
+                      captionLayout="dropdown"
+                      defaultMonth={field.value }
+                      disabled={(date) => addDays(date, 1) < new Date()}
+                      fromYear={new Date().getFullYear()}
+                      toYear={2100}
+                      // onSelect={field.onChange}
+                      onSelect={(date) => {
+                        field.onChange(date);
+                        setOpenExpiry(false); // close popover on date select
+                      }}
                     />
                   </PopoverContent>
                 </Popover>
