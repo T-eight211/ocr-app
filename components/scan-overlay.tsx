@@ -159,9 +159,9 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
             {!capturedImage ? (
               <button
                 onClick={handleCapture}
-                className="w-12 h-12 mx-auto rounded-full bg-black flex items-center justify-center hover:bg-gray-300 transition"
+                className="relative w-16 h-16 mx-auto rounded-full border-4 border-black flex items-center justify-center bg-transparent active:scale-95 transition"
               >
-                ●
+                <span className="w-13 h-13 rounded-full bg-black"></span>
               </button>
             ) : (
               <>
@@ -189,14 +189,14 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
                   Done
                 </Button>
               </>
-            )}
+)}
           </div>
         </div>
       </div>
 
       {/* Alert Dialog for OCR errors */}
       <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
-        <AlertDialogContent className="max-w-lg w-full px-8">
+        <AlertDialogContent className="w-[calc(100%-62px)]">
           <AlertDialogHeader>
             <AlertDialogTitle>Something went wrong</AlertDialogTitle>
             <AlertDialogDescription>
