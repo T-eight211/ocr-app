@@ -196,7 +196,7 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
 
       {/* Alert Dialog for OCR errors */}
       <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-lg w-full px-8">
           <AlertDialogHeader>
             <AlertDialogTitle>Something went wrong</AlertDialogTitle>
             <AlertDialogDescription>

@@ -98,7 +98,7 @@ export default function DocumentForm() {
 
   return (
     <Form {...form}>
-      <div className="max-w-lg mx-auto p-8 border rounded-md shadow-md">
+      <div className="max-w-lg mx-auto  p-8 border rounded-md shadow-md">
         <div className="mb-6 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Document Form</h1>
           <Button
