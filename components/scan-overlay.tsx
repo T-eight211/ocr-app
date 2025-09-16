@@ -10,9 +10,9 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import { Progress } from "@/components/ui/progress"; // ✅ import shadcn Progress
 import { performOCR } from "@/utils/ocr";
 import NextImage from "next/image";
-
 
 interface ScanOverlayProps {
   onClose: () => void;
@@ -27,6 +27,7 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showAlert, setShowAlert] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false); // ✅ track OCR progress
 
   const startCamera = async () => {
     try {
@@ -74,6 +75,8 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
   const handlePrefill = async () => {
     if (!capturedImage) return;
 
+    setLoading(true); // ✅ show progress
+
     const canvas = document.createElement("canvas");
     const img = new Image();
     img.src = capturedImage;
@@ -90,18 +93,21 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
 
     try {
       const text = await performOCR(canvas);
+      setLoading(false); // ✅ hide progress
       onCapture(text);
     } catch (err: unknown) {
       console.error("OCR failed:", err);
+      setLoading(false); // ✅ hide progress
       const message =
         err instanceof Error ? err.message : "OCR failed. Please try again.";
       setOcrError(message);
-      setShowAlert(true);
+      setShowAlert(true); // ✅ show alert instead
     }
   };
 
   const handleRetake = () => {
     setCapturedImage(null);
+    setShowAlert(false);
     startCamera();
   };
 
@@ -151,7 +157,6 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
               )}
               <div className="absolute inset-0 m-4 border-2 border-black rounded-md pointer-events-none"></div>
             </div>
-
           </div>
 
           {/* Bottom buttons */}
@@ -170,6 +175,7 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
                     variant="outline"
                     onClick={handleRetake}
                     className="flex-1 flex items-center justify-center gap-2"
+                    disabled={loading} // disable while loading
                   >
                     <RotateCcw /> Retake
                   </Button>
@@ -177,19 +183,29 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
                     variant="default"
                     onClick={handlePrefill}
                     className="flex-1 flex items-center justify-center gap-2"
+                    disabled={loading}
                   >
-                    <Check /> Prefill Form
+                    <Check /> {loading ? "Processing..." : "Prefill Form"}
                   </Button>
                 </div>
                 <Button
                   variant="secondary"
                   onClick={handleClose}
                   className="w-full mt-2"
+                  disabled={loading}
                 >
                   Done
                 </Button>
               </>
-)}
+            )}
+
+            {/* ✅ Show progress bar while OCR runs */}
+            {loading && (
+              <div className="mt-2">
+                <Progress value={66} className="w-full" />
+                <p className="text-center text-sm mt-1">Extracting text...</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
