@@ -46,7 +46,7 @@ export default function DocumentForm() {
   });
 
   const [showScan, setShowScan] = useState(false);
-  const [ocrResult, setOcrResult] = useState<string>(""); // ✅ new state
+
 
   const handleScanClick = () => setShowScan(true);
   const handleCloseScan = () => setShowScan(false);
@@ -57,40 +57,26 @@ export default function DocumentForm() {
 
   
 
-  const handleCapture = (text?: string) => {
-    if (text) {
-      setOcrResult(text); // still store raw OCR for display
+  const handleCapture = (data: { ocrText: string; parsed: { givenNames: string; surname: string; dateOfBirth?: string; dateOfExpiry?: string; documentNumber: string; documentType: string } }) => {
+    const parsedMRZ = data.parsed;
+    console.log("Parsed MRZ data:", parsedMRZ);
 
-      try {
-        const parsed = parseMRZ(text);
-        console.log("Parsed MRZ data:", parsed);
-        
-
-        // Pre-fill form
-        form.setValue("name", parsed.givenNames);
-        form.setValue("surname", parsed.surname);
-        if (parsed.dateOfBirth) {
-          const dob = parse(parsed.dateOfBirth, "dd/MM/yyyy", new Date());
-          if (isValid(dob)) {
-            form.setValue("dob", dob);
-          }
-        }
-        form.setValue("documentType", parsed.documentType === "P" ? "passport" : "id_card"); // simple mapping
-        form.setValue("documentNumber", parsed.documentNumber);
-        if (parsed.dateOfExpiry) {
-          const expiry = parse(parsed.dateOfExpiry, "dd/MM/yyyy", new Date());
-          if (isValid(expiry)) {
-            form.setValue("expiryDate", expiry);
-          }
-        }
-      } catch (err) {
-        console.error("MRZ parsing failed:", err);
-      }
+    // Pre-fill form
+    form.setValue("name", parsedMRZ.givenNames);
+    form.setValue("surname", parsedMRZ.surname);
+    if (parsedMRZ.dateOfBirth) {
+      const dob = parse(parsedMRZ.dateOfBirth, "dd/MM/yyyy", new Date());
+      if (isValid(dob)) form.setValue("dob", dob);
+    }
+    form.setValue("documentType", parsedMRZ.documentType === "P" ? "passport" : "id_card");
+    form.setValue("documentNumber", parsedMRZ.documentNumber);
+    if (parsedMRZ.dateOfExpiry) {
+      const expiry = parse(parsedMRZ.dateOfExpiry, "dd/MM/yyyy", new Date());
+      if (isValid(expiry)) form.setValue("expiryDate", expiry);
     }
 
     setShowScan(false);
   };
-
 
   const onSubmit = (data: FormValues) => {
     console.log(data);
@@ -259,7 +245,6 @@ export default function DocumentForm() {
               className="flex-1"
               onClick={() => {
                 form.reset(); // 🔑 This clears all fields back to defaultValues
-                setOcrResult(""); // also clear OCR result box
               }}
             >
               Clear
@@ -268,12 +253,7 @@ export default function DocumentForm() {
         </form>
       </div>
       {showScan && <ScanOverlay onClose={handleCloseScan} onCapture={handleCapture} />}
-      {ocrResult && (
-        <div className="max-w-lg mx-auto p-4 mt-4 border rounded-md shadow-md bg-gray-50">
-          <h3 className="font-semibold mb-2">OCR Result:</h3>
-          <p className="whitespace-pre-wrap">{ocrResult}</p>
-        </div>
-      )}
+
     </Form>
 
   );

@@ -10,13 +10,17 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Progress } from "@/components/ui/progress"; // ✅ import shadcn Progress
+import { Progress } from "@/components/ui/progress";
 import { performOCR } from "@/utils/ocr";
+import { parseMRZ } from "@/utils/mrzParser";
 import NextImage from "next/image";
 
 interface ScanOverlayProps {
   onClose: () => void;
-  onCapture: (text: string) => void;
+  onCapture: (data: {
+    ocrText: string;
+    parsed: { givenNames: string; surname: string; dateOfBirth?: string; dateOfExpiry?: string; documentNumber: string; documentType: string };
+  }) => void;
 }
 
 export const ScanOverlay: React.FC<ScanOverlayProps> = ({
@@ -26,8 +30,9 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showAlert, setShowAlert] = useState(false);
-  const [ocrError, setOcrError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false); // ✅ track OCR progress
+  const [error, setError] = useState<string | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const startCamera = async () => {
     try {
@@ -36,8 +41,8 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
       });
       if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (err) {
-      console.error("Error accessing camera:", err);
-      setOcrError("Could not access the camera. Please check permissions.");
+      console.error(err);
+      setError("Could not access the camera. Check permissions.");
       setShowAlert(true);
     }
   };
@@ -45,7 +50,7 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
   const stopCamera = () => {
     if (videoRef.current?.srcObject) {
       const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach((track) => track.stop());
+      tracks.forEach((t) => t.stop());
       videoRef.current.srcObject = null;
     }
   };
@@ -55,9 +60,8 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
     return () => stopCamera();
   }, [capturedImage]);
 
-  const handleCapture = async () => {
+  const handleCapture = () => {
     if (!videoRef.current) return;
-
     const video = videoRef.current;
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
@@ -65,55 +69,65 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
 
-    const imageData = canvas.toDataURL("image/png");
-    setCapturedImage(imageData);
+    setCapturedImage(canvas.toDataURL("image/png"));
   };
 
-  const handlePrefill = async () => {
+  const handleProcess = async () => {
     if (!capturedImage) return;
-
-    setLoading(true); // ✅ show progress
-
-    const canvas = document.createElement("canvas");
-    const img = new Image();
-    img.src = capturedImage;
-    await new Promise<void>((resolve) => {
-      img.onload = () => resolve();
-    });
-
-    canvas.width = img.width;
-    canvas.height = img.height;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.drawImage(img, 0, 0);
-
+    setLoading(true);
     try {
-      const text = await performOCR(canvas);
-      setLoading(false); // ✅ hide progress
-      onCapture(text);
+      // OCR
+      const canvas = document.createElement("canvas");
+      const img = new Image();
+      img.src = capturedImage;
+      await new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+      });
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas context not available");
+      ctx.drawImage(img, 0, 0);
+
+      const ocrText = await performOCR(canvas);
+      let parsed;
+      try {
+        parsed = parseMRZ(ocrText); // MRZ parsing
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "MRZ parsing failed";
+        setParseError(message);
+        throw new Error(message); // will trigger alert
+      }
+
+      // send data to parent
+      onCapture({ ocrText, parsed });
     } catch (err: unknown) {
-      console.error("OCR failed:", err);
-      setLoading(false); // ✅ hide progress
-      const message =
-        err instanceof Error ? err.message : "OCR failed. Please try again.";
-      setOcrError(message);
-      setShowAlert(true); // ✅ show alert instead
+      console.error(err);
+      setError(err instanceof Error ? err.message : "Processing failed. Try again.");
+      setShowAlert(true);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleRetake = () => {
     setCapturedImage(null);
     setShowAlert(false);
+    setError(null);
+    setParseError(null); // reset parsing errors
     startCamera();
   };
+
 
   const handleClose = () => {
     stopCamera();
     onClose();
+    setCapturedImage(null);
+    setShowAlert(false);
+    setError(null);
+    setParseError(null); // reset parsing errors
   };
 
   return (
@@ -125,7 +139,7 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
           </Button>
         </div>
 
-        <div className="grid grid-rows-[1fr_7fr_2fr] flex-1 max-w-lg mx-auto gap-2 w-full">
+        <div className="grid grid-rows-[1fr_6.5fr_2.5fr] flex-1 max-w-lg mx-auto gap-2 w-full">
           {/* Instructions */}
           <div className="flex items-end justify-center">
             <h2 className="text-l md:text-xl text-center">
@@ -133,7 +147,7 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
             </h2>
           </div>
 
-          {/* Video or captured image */}
+          {/* Video / Captured Image */}
           <div className="flex items-center justify-center relative">
             <div className="relative w-full aspect-[125/88] border-2 border-dashed rounded-md border-black overflow-hidden">
               {!capturedImage ? (
@@ -145,21 +159,13 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
                   className="w-full h-full object-cover rounded-md"
                 />
               ) : (
-                <div className="relative w-full h-full">
-                  <NextImage
-                    src={capturedImage}
-                    alt="Captured"
-                    fill
-                    className="object-cover rounded-md"
-                    priority
-                  />
-                </div>
+                <NextImage src={capturedImage} alt="Captured" fill className="object-cover rounded-md" priority />
               )}
               <div className="absolute inset-0 m-4 border-2 border-black rounded-md pointer-events-none"></div>
             </div>
           </div>
 
-          {/* Bottom buttons */}
+          {/* Bottom Buttons */}
           <div className="flex flex-col items-stretch justify-end gap-2">
             {!capturedImage ? (
               <button
@@ -171,62 +177,39 @@ export const ScanOverlay: React.FC<ScanOverlayProps> = ({
             ) : (
               <>
                 <div className="flex gap-4">
-                  <Button
-                    variant="outline"
-                    onClick={handleRetake}
-                    className="flex-1 flex items-center justify-center gap-2"
-                    disabled={loading} // disable while loading
-                  >
+                  <Button variant="outline" onClick={handleRetake} className="flex-1" disabled={loading}>
                     <RotateCcw /> Retake
                   </Button>
-                  <Button
-                    variant="default"
-                    onClick={handlePrefill}
-                    className="flex-1 flex items-center justify-center gap-2"
-                    disabled={loading}
-                  >
+                  <Button variant="default" onClick={handleProcess} className="flex-1" disabled={loading}>
                     <Check /> {loading ? "Processing..." : "Prefill Form"}
                   </Button>
                 </div>
-                <Button
-                  variant="secondary"
-                  onClick={handleClose}
-                  className="w-full mt-2"
-                  disabled={loading}
-                >
+                <Button variant="secondary" onClick={handleClose} className="w-full mt-2" disabled={loading}>
                   Done
                 </Button>
               </>
             )}
 
-            {/* ✅ Show progress bar while OCR runs */}
             {loading && (
               <div className="mt-2">
                 <Progress value={66} className="w-full" />
-                <p className="text-center text-sm mt-1">Extracting text...</p>
+                <p className="text-center text-sm mt-1">Extracting text and parsing MRZ...</p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Alert Dialog for OCR errors */}
+      {/* Alert Dialog */}
       <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
         <AlertDialogContent className="w-[calc(100%-62px)]">
           <AlertDialogHeader>
             <AlertDialogTitle>Something went wrong</AlertDialogTitle>
             <AlertDialogDescription>
-              {ocrError || "Unable to process the image. Please try again."}
+              {parseError || error || "Processing failed. Please try again."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogAction
-            onClick={() => {
-              setShowAlert(false);
-              handleRetake(); // reset state & restart camera
-            }}
-          >
-            Retake
-          </AlertDialogAction>
+          <AlertDialogAction onClick={handleRetake}>Retake</AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
     </>
